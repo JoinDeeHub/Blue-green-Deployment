@@ -1,441 +1,368 @@
+# Blue-Green Deployment using Docker & Kubernetes (Minikube)
 
-ShopNow -- Container Orchestration with Kubernetes & Helm (MERN Stack)
-======================================================================
+## 📌 Overview
 
-📌 Project Overview
--------------------
+This project demonstrates containerization and blue-green deployment of a Node.js application using:
 
-This project demonstrates container orchestration, deployment, and automation of a **MERN stack application (MongoDB, Express.js, React.js, Node.js)** using **Kubernetes**, **Helm**, and **Jenkins**.
-
-The repository was forked from an existing production-style project and extended through **execution, validation, troubleshooting, and documentation** to demonstrate real-world DevOps understanding rather than rewriting boilerplate configurations.
-
----
-
-🏗️ Architecture Overview
---------------------------
-
-**Components:**
-
-- **MongoDB** -- Database (StatefulSet)
-- **Backend** -- Node.js + Express API
-- **Frontend** -- React application served via Nginx
-- **Admin UI** -- Optional management interface
-- **Ingress** -- External access routing
-- **CI/CD** -- Jenkins pipelines
-- **GitOps (Optional)** -- ArgoCD manifests
-
-**Key Design Choices:**
-
-- MongoDB deployed as a **StatefulSet** with persistent storage
-- Application components deployed as **Kubernetes Deployments**
-- Configuration externalized using **ConfigMaps** and **Secrets**
-- Horizontal Pod Autoscaling (HPA) enabled
-- Helm charts used for repeatable, parameterized deployments
-
----
-
-📁 Repository Structure (Relevant Sections)
--------------------------------------------
-
-`kubernetes/ ├── k8s-manifests/ │   ├── admin/ │   ├── backend/ │   ├── frontend/ │   ├── database/ │   ├── ingress/ │   └── namespace/ ├── helm/ │   └── charts/ │       ├── admin/ │       ├── backend/ │       ├── frontend/ │       └── mongo/ jenkins/ ├── Jenkinsfile.ci.* ├── Jenkinsfile.cd.* docs/ ├── APPLICATION-ARCHITECTURE.md ├── K8S-CONCEPTS.md ├── TOOLS-SETUP-GUIDE.md └── TROUBLESHOOTING.md`
-
----
-
-🚀 Local Deployment Validation (Minikube)
------------------------------------------
-
-### Environment
-
-- Docker
-- Kubernetes (Minikube)
-- kubectl
-- Helm
-
-### Cluster Setup
-
-- Minikube cluster initialized successfully
-- Ingress controller enabled
-- Metrics server deployed for HPA support
-- Dedicated namespace (`shopnow-demo`) created
-
----
-
-🗄️ Database Deployment (MongoDB)
-----------------------------------
-
-- MongoDB deployed as a **StatefulSet**
-- Persistent storage configured using a **cloud-native StorageClass**
-- For local Minikube testing, MongoDB was recreated using a **hostPath-based StorageClass**
-- PVC lifecycle and StatefulSet immutability rules were validated
-
-**Result:**
-✅ MongoDB pod successfully reached `Running` state with persistent storage attached
-
----
-
-🔌 Backend Deployment & Validation
-----------------------------------
-
-- Backend service deployed as a Kubernetes Deployment
-- Local backend image built and loaded into Minikube **without modifying production image references**
-- Backend container started successfully and exposed health endpoint
-
-**Observed Behavior:**
-
-- Backend successfully reached MongoDB service endpoint
-- MongoDB authentication failed due to credential mismatch
-
-**Interpretation:**
-
-- Network connectivity and service discovery are working correctly
-- Authentication enforcement confirms secure secret handling
-- Failure is expected since production credentials are not used locally
-
----
-
-🎨 Frontend Deployment & Validation
------------------------------------
-
-- Frontend React application built locally and loaded into Minikube
-- Frontend deployment successfully reached `Running` state
-- Application accessible locally via port-forwarding
-
-**Result:**
-✅ Frontend container validated successfully in Kubernetes
-
----
-
-🔐 ImagePullBackOff Observations (Expected Behavior)
-----------------------------------------------------
-
-Some pods (e.g., Admin service) remained in `ImagePullBackOff` state due to:
-
-- Container images hosted in **private AWS ECR**
-- No registry authentication configured in local Minikube cluster
-
-This behavior confirms:
-
-- Kubernetes attempted image pulls correctly
-- Registry authentication is enforced
-- Failures are related to environment access, not configuration errors
-
----
-
-🔄 CI/CD & Automation
----------------------
-
-- Jenkins CI pipelines build and push container images
-- Jenkins CD pipelines deploy applications using Kubernetes / Helm
-- Separate pipelines maintained for frontend, backend, and admin services
-- Helm enables repeatable deployments and environment-specific overrides
-- ArgoCD manifests provided for GitOps-based deployment (optional)
-
----
-
-📦 Helm Usage
--------------
-
-Helm charts are provided for:
-
-- MongoDB
-- Backend
-- Frontend
-- Admin
-
-Helm abstracts:
-
-- Image versions
-- Replica counts
-- Resource limits
-- Ingress configuration
-
-This enables consistent deployments across environments (dev, staging, production).
-
----
-
-🧪 Key Learnings & Production Readiness
----------------------------------------
-
-- StatefulSet immutability and PVC lifecycle management
-- Cloud vs local storage differences (EKS vs Minikube)
-- Secure handling of private container registries
-- Service discovery and internal networking in Kubernetes
-- Health checks, autoscaling, and rolling updates
-- Separation of production configuration and local testing overrides
-
----
-
-✅ Final Execution Summary
---------------------------
-
-- MongoDB deployed and running with persistent storage
-- Backend service started successfully and reached MongoDB endpoint
-- Authentication failure observed as expected due to secret mismatch
-- Frontend deployed and accessible locally
-- Kubernetes scheduling, scaling, and lifecycle management validated
-- Production-grade architecture demonstrated with local execution evidence# 🚀 Blue-Green Deployment using Docker & Kubernetes (Minikube)
-
-## 📌 Project Overview
-
-This project demonstrates a complete DevOps lifecycle implementation of a Node.js application using:
-
-- Docker & Docker Compose
-- Kubernetes (Minikube)
-- MongoDB
+- Docker & Docker Compose\
+- Kubernetes (Minikube)\
+- MongoDB\
 - Blue-Green Deployment Strategy
 
 The application consists of:
 
-- Backend (Express + MongoDB)
-- Frontend Blue version
-- Frontend Green version
+- Backend (Express + MongoDB)\
+- Frontend Blue version\
+- Frontend Green version\
 - Kubernetes-based traffic switching
-- Zero-downtime deployment
 
 ---
 
-# 🏗 Architecture Overview
+## 🏗 Architecture Overview
 
-## 🔹 Kubernetes Architecture
+### Local / Docker Architecture
 
-Traffic routing is controlled dynamically via Kubernetes Service selectors.
+User → Frontend (Blue/Green) → Backend → MongoDB
 
-🖥 Part 1 -- Local Deployment
+### Kubernetes Architecture
 
-1️⃣ Clone Repository
+User\
+↓\
+NodePort Service (frontend-service)\
+↓\
+Selector-based routing (version=blue / version=green)\
+↓\
+Frontend Pods\
+↓\
+Backend Service\
+↓\
+MongoDB Service
 
-git clone `<repository-url>`
+<img width="499" height="523" alt="image" src="https://github.com/user-attachments/assets/c5709a6a-207b-4ae1-9f41-fdf184496f24" />
 
+
+<img width="1359" height="516" alt="Screenshot from 2026-02-22 20-53-46" src="https://github.com/user-attachments/assets/b39508d9-3776-4a98-a0bb-a581cbd39f74" />
+
+---
+
+# 🚀 Part 1 -- Local Deployment
+
+## 1️⃣ Clone Repository
+
+```
+git clone <repository-url>\
 cd Blue-green-Deployment
 
 2️⃣ Install Dependencies
+------------------------
 
 Backend:
 
-cd backend
-
+cd backend\
 npm install
 
 Frontend Blue:
 
-cd ../frontend-blue
-
+cd ../frontend-blue\
 npm install
 
 Frontend Green:
 
-cd ../frontend-green
-
+cd ../frontend-green\
 npm install
 
-3️⃣ Start Application
+3️⃣ MongoDB Setup
+-----------------
+
+Using Docker:
+
+docker run -d -p 27017:27017 --name mongodb mongo
+
+4️⃣ Start Services
+------------------
+
+Backend:
 
 npm start
 
-Verification:
+Frontend:
 
-Backend: http://localhost:5000/health
+npm start
 
-Frontend accessible
+Verify:
 
-Registration successful
+-   Backend: <http://localhost:5000/health>
 
-Data stored in MongoDB
+-   Frontend accessible
+
+-   Registration successful
+
+-   Data stored in MongoDB
+
+* * * * *
+
+```
 
 🐳 Part 2 -- Containerization
+============================
 
-🔹 Docker Implementation
+```
 
-Services containerized:
+🔹 Backend Dockerfile
+---------------------
 
-MongoDB
+-   Node 18 Alpine
 
-Backend
+-   Exposes port 5000
 
-Frontend Blue
+-   Uses environment variable for MongoDB connection
 
-Frontend Green
+🔹 Frontend Dockerfiles
+-----------------------
+
+-   Node 18 Alpine
+
+-   Blue runs on port 3100
+
+-   Green runs on port 3200
+
+🔹 docker-compose.yml
+---------------------
+
+Services:
+
+-   mongodb
+
+-   backend
+
+-   frontend-blue
+
+-   frontend-green
 
 Run:
 
 docker compose up --build
 
-Verify:
+Verification:
 
 docker ps
 
-Access:
+Application accessible via:
 
-Blue → http://localhost:3002
+-   Blue → http://localhost:3002
 
-Green → http://localhost:3001
+-   Green → http://localhost:3001
 
-Backend → http://localhost:5000/health
+-   Backend → <http://localhost:5000/health>
 
-Key Improvements Implemented
-
-Fixed port conflicts
-
-Corrected MongoDB container networking
-
-Ensured frontend binding to correct host interface
-
-Validated data persistence inside MongoDB
+* * * * *
+```
 
 ☸ Part 3 -- Kubernetes Deployment (Minikube)
-
-1️⃣ Start Cluster
+===========================================
+```
+1️⃣ Start Minikube
+------------------
 
 minikube start
 
 2️⃣ Build Images Inside Minikube
+--------------------------------
 
 eval $(minikube docker-env)
 
-docker build -t backend-image ./backend
-
-docker build -t frontend-blue-image ./frontend-blue
-
+docker build -t backend-image ./backend\
+docker build -t frontend-blue-image ./frontend-blue\
 docker build -t frontend-green-image ./frontend-green
 
-3️⃣ Kubernetes Manifests Included
+3️⃣ Kubernetes Manifests Created
+--------------------------------
 
-All manifest files are included inside the k8s/ directory:
+-   mongodb-deployment.yaml
 
-mongodb-deployment.yaml
+-   mongodb-service.yaml
 
-mongodb-service.yaml
+-   backend-deployment.yaml
 
-backend-deployment.yaml
+-   backend-service.yaml
 
-backend-service.yaml
+-   frontend-blue.yaml
 
-frontend-blue.yaml
+-   frontend-green.yaml
 
-frontend-green.yaml
+-   frontend-service.yaml
 
-frontend-service.yaml
-
+Important:\
 Custom images use:
 
 imagePullPolicy: Never
 
 4️⃣ Deploy to Cluster
+---------------------
 
 kubectl apply -f k8s/
 
-Verification:
+Verify:
 
-kubectl get pods
-
+kubectl get pods\
 kubectl get svc
 
-Ensure all pods are in Running state before testing.
-
-Access application:
+Access Application:
 
 minikube service frontend-service
 
-Registration tested successfully inside Kubernetes cluster.
+Registration successful confirms:
 
-🔵🟢 Part 4 -- Blue-Green Deployment Strategy
+-   Frontend → Backend
 
-Two separate deployments were created:
+-   Backend → MongoDB
 
-frontend-blue (version=blue)
+-   Kubernetes networking working
 
-frontend-green (version=green)
+* * * * *
+```
+
+🔵🟢 Part 4 -- Blue-Green Deployment Implementation
+==================================================
+```
+Two frontend deployments were created:
+
+-   frontend-blue (version=blue)
+
+-   frontend-green (version=green)
 
 Both run simultaneously.
 
-🔹 Initial State (Blue Active)
+🔹 Service-Based Traffic Routing
+--------------------------------
 
-kubectl describe svc frontend-service
+The frontend-service routes traffic based on labels:
 
-Selector:
-
-app=frontend, version=blue
+selector:\
+  app: frontend\
+  version: blue
 
 🔹 Switch to Green
+------------------
 
-kubectl patch service frontend-service
-
+kubectl patch service frontend-service \\
 -p '{"spec":{"selector":{"app":"frontend","version":"green"}}}'
 
-Traffic switches instantly without downtime.
+🔹 Switch Back to Blue
+----------------------
 
-🔹 Rollback to Blue
-
-kubectl patch service frontend-service
-
+kubectl patch service frontend-service \\
 -p '{"spec":{"selector":{"app":"frontend","version":"blue"}}}'
 
-Zero downtime observed during switching.
+Traffic switching occurs instantly without downtime because both versions are running simultaneously.
 
-📋 Feedback Improvements & Validation
+* * * * *
 
-🔍 Previous Feedback Addressed
+🧠 Blue-Green Deployment Strategy
+=================================
 
-1️⃣ Screenshot Accuracy
+This implementation uses:
 
-Revalidated all screenshots.
+-   Label-based routing
 
-Ensured application state matched displayed UI.
+-   Separate deployments for each version
 
-Verified successful registration before capturing screenshots.
+-   Kubernetes Service selector modification
 
-Confirmed pods were in Running state.
+-   Zero-downtime traffic switching
 
-2️⃣ Manifest Inclusion
+Both versions remain active during deployment, ensuring high availability.
 
-All Kubernetes manifest files are included in the repository.
+```
 
-Deployment verified using:
+<img width="1063" height="285" alt="image" src="https://github.com/user-attachments/assets/ed053b8d-37a7-41c5-8e97-bb3e071e24fd" />
 
-kubectl apply -f k8s/
 
-Confirmed all services and deployments were active before submission.
+* * * * *
 
-✅ Final Validation Checklist
+⚠ Challenges Faced & Solutions
+==============================
 
-Before submission, verified:
+| Challenge | Solution |
+| --- | --- |
+| Docker port conflict | Changed host port mapping |
+| MongoDB connection failure | Used service name instead of localhost |
+| Kubernetes ErrImagePull | Added `imagePullPolicy: Never` |
+| Service unreachable | Corrected targetPort based on container port |
+| Blue-Green switch routing issue | Patched both selector and targetPort |
 
-All Docker containers running
+* * * * *
 
-All Kubernetes pods in Running state
+📸 Screenshots Included
+=======================
 
-Services properly exposed
+-   Local deployment working
+-   Docker containers running
+-   Kubernetes pods & services running
+-   Successful registration in cluster
+-   Blue → Green switch demonstration
+-   Green → Blue rollback demonstration
 
-No ErrImagePull errors
+<img width="1360" height="760" alt="Screenshot from 2026-02-21 22-38-49" src="https://github.com/user-attachments/assets/aa3f36f5-e735-46ff-84de-2e65982ef665" />
 
-Blue-Green switch functional
+<img width="1360" height="760" alt="Screenshot from 2026-02-21 22-39-01" src="https://github.com/user-attachments/assets/f07ce36a-bc78-4d94-bb79-89a12ce733a4" />
 
-Rollback successful
+<img width="1360" height="760" alt="Screenshot from 2026-02-21 22-39-59" src="https://github.com/user-attachments/assets/63fd3ce0-4ca3-44aa-9347-c607bb25db77" />
 
-MongoDB storing user data
+<img width="1360" height="760" alt="Screenshot from 2026-02-21 22-40-56" src="https://github.com/user-attachments/assets/3eb427c8-deba-4072-b7fd-aa8e83f171bd" />
 
-Screenshots reflect actual working state
+<img width="535" height="760" alt="Screenshot from 2026-02-21 22-54-01" src="https://github.com/user-attachments/assets/a62a9ef2-6b60-458b-b92a-97226d2c261d" />
 
+<img width="1359" height="760" alt="Screenshot from 2026-02-21 23-28-47" src="https://github.com/user-attachments/assets/4c8bf8ca-db1f-4a6d-9c4a-d5248f9dfac8" />
+
+<img width="1359" height="760" alt="Screenshot from 2026-02-22 00-00-24" src="https://github.com/user-attachments/assets/209272c5-3b7c-4b0a-a816-20a826986364" />
+
+<img width="1359" height="516" alt="Screenshot from 2026-02-22 15-31-29" src="https://github.com/user-attachments/assets/35e6cfc0-4fcc-40af-bb88-dd20f12b63cc" />
+
+<img width="1359" height="698" alt="Screenshot from 2026-02-22 11-30-32" src="https://github.com/user-attachments/assets/dc4920fd-5db7-4c51-9cae-67cddf904a00" />
+
+<img width="1359" height="698" alt="Screenshot from 2026-02-22 11-30-25" src="https://github.com/user-attachments/assets/f8ddcda1-c2df-4d4b-a3b1-39be68f52959" />
+
+
+* * * * *
+```
 🎯 Key Concepts Demonstrated
+============================
 
-Multi-container Docker setup
+-   Containerization using Docker
 
-Environment-based configuration
+-   Multi-service orchestration
 
-Kubernetes Deployments & Services
+-   Kubernetes Deployments & Services
 
-NodePort exposure
+-   Readiness probes
 
-Label-based traffic routing
+-   NodePort exposure
 
-Blue-Green deployment strategy
+-   Blue-Green deployment strategy
 
-Zero-downtime release switching
+-   Zero-downtime traffic switching
 
-Controlled rollback capability
+-   Service selector-based routing
 
+* * * * *
+```
+
+```
 🏁 Conclusion
+=============
 
-This project demonstrates a complete containerized deployment workflow from local development to Kubernetes orchestration, including a fully functional Blue-Green deployment strategy with zero downtime.
+This project successfully demonstrates a complete DevOps lifecycle:
 
-The implementation reflects strong understanding of Docker networking, Kubernetes service routing, deployment strategies, and production-ready DevOps practices.
+-   Local setup
+
+-   Containerization
+
+-   Kubernetes deployment
+
+-   Blue-Green production strategy
+
+-   Zero-downtime traffic switching
+
+The implementation showcases strong understanding of Docker networking, Kubernetes service routing, and real-world deployment strategies.
+```
